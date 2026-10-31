@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#05090f">
+  <title>JARVIS</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <!-- Anmeldung -->
+  <section id="login" class="login" hidden>
+    <form id="login-form" class="login-card" autocomplete="on">
+      <div class="orb orb-large" data-state="idle" aria-hidden="true"><span></span></div>
+      <h1>J.A.R.V.I.S.</h1>
+      <p class="muted">Bitte melden Sie sich an.</p>
+      <label>
+        Passwort
+        <input id="login-password" type="password" autocomplete="current-password" required>
+      </label>
+      <label>
+        Gerätename <span class="muted">(optional)</span>
+        <input id="login-device" type="text" maxlength="60" placeholder="z. B. Windows-PC">
+      </label>
+      <button type="submit" class="primary">Anmelden</button>
+      <p id="login-error" class="error" role="alert"></p>
+    </form>
+  </section>
+
+  <!-- Hauptoberfläche -->
+  <div id="app" class="app" hidden>
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-head">
+        <button id="new-chat" class="primary wide">+ Neues Gespräch</button>
+      </div>
+      <nav id="conversation-list" class="conversation-list" aria-label="Gespräche"></nav>
+    </aside>
+    <div id="sidebar-backdrop" class="backdrop" hidden></div>
+
+    <main class="main">
+      <header class="topbar">
+        <button id="toggle-sidebar" class="icon-btn" aria-label="Gespräche anzeigen" title="Gespräche">☰</button>
+        <div class="status">
+          <div id="orb" class="orb" data-state="idle" aria-hidden="true"><span></span></div>
+          <div>
+            <div class="brand">J.A.R.V.I.S.</div>
+            <div id="status-text" class="status-text" aria-live="polite">Bereit</div>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button id="open-memory" class="ghost" title="Gedächtnis" aria-label="Gedächtnis"><span class="ico" aria-hidden="true">◉</span><span class="label">Gedächtnis</span></button>
+          <button id="open-settings" class="ghost" title="Einstellungen" aria-label="Einstellungen"><span class="ico" aria-hidden="true">⚙</span><span class="label">Einstellungen</span></button>
+        </div>
+      </header>
+
+      <div id="notice" class="notice" hidden></div>
+
+      <section id="messages" class="messages" aria-live="polite">
+        <div id="welcome" class="welcome">
+          <div class="orb orb-large" data-state="idle" aria-hidden="true"><span></span></div>
+          <h2>Guten Tag. Wie kann ich Ihnen helfen?</h2>
+          <p class="muted">Schreiben Sie einfach los. Wichtiges über Sie merke ich mir – Sie behalten unter „Gedächtnis“ jederzeit die Kontrolle.</p>
+        </div>
+      </section>
+
+      <form id="composer" class="composer">
+        <textarea id="input" rows="1" placeholder="Nachricht an JARVIS …" aria-label="Nachricht" maxlength="20000"></textarea>
+        <button id="send" type="submit" class="primary send" aria-label="Senden">Senden</button>
+        <button id="stop" type="button" class="danger send" hidden aria-label="Antwort stoppen">Stopp</button>
+      </form>
+    </main>
+
+    <!-- Gedächtnis -->
+    <aside id="memory-panel" class="panel" hidden aria-label="Gedächtnis">
+      <header class="panel-head">
+        <h2>Gedächtnis</h2>
+        <button class="icon-btn" data-close aria-label="Schließen">✕</button>
+      </header>
+      <p class="muted small">Alles, was JARVIS langfristig über Sie weiß. Deaktivierte Erinnerungen werden nicht verwendet, bleiben aber erhalten.</p>
+      <input id="memory-search" type="search" placeholder="Erinnerungen durchsuchen …">
+      <form id="memory-add" class="memory-form">
+        <textarea id="memory-new" rows="2" placeholder="Neue Erinnerung, z. B. „Ich trinke meinen Kaffee schwarz.“" maxlength="2000"></textarea>
+        <div class="row">
+          <select id="memory-new-category" aria-label="Kategorie"></select>
+          <select id="memory-new-importance" aria-label="Wichtigkeit">
+            <option value="1">nebensächlich</option>
+            <option value="2" selected>normal</option>
+            <option value="3">sehr wichtig</option>
+          </select>
+          <button type="submit" class="primary">Speichern</button>
+        </div>
+      </form>
+      <div id="memory-list" class="memory-list"></div>
+    </aside>
+
+    <!-- Einstellungen -->
+    <aside id="settings-panel" class="panel" hidden aria-label="Einstellungen">
+      <header class="panel-head">
+        <h2>Einstellungen</h2>
+        <button class="icon-btn" data-close aria-label="Schließen">✕</button>
+      </header>
+
+      <h3>KI-Modell</h3>
+      <div id="provider-list" class="provider-list"></div>
+
+      <h3>Gedächtnis</h3>
+      <label class="switch">
+        <input id="setting-auto-memory" type="checkbox">
+        <span>Wichtige Informationen automatisch merken</span>
+      </label>
+
+      <h3>Verbundene Geräte</h3>
+      <div id="device-list" class="device-list"></div>
+
+      <h3>Funktionen</h3>
+      <ul id="feature-list" class="feature-list"></ul>
+
+      <button id="logout" class="ghost wide">Auf diesem Gerät abmelden</button>
+      <p id="version" class="muted small"></p>
+    </aside>
+    <div id="panel-backdrop" class="backdrop" hidden></div>
+  </div>
+
+  <!-- Bestätigungsdialog -->
+  <dialog id="confirm">
+    <form method="dialog">
+      <p id="confirm-text"></p>
+      <div class="row end">
+        <button value="cancel" class="ghost">Abbrechen</button>
+        <button value="ok" class="danger">Bestätigen</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>
