@@ -3,7 +3,7 @@
 > Diese Datei wird zu Beginn jeder Arbeitssitzung gelesen und nach jedem
 > abgeschlossenen Schritt aktualisiert. Regeln: siehe Master-Prompt, Abschnitt 19.
 
-**Letzte Aktualisierung:** 31.10.2026
+**Letzte Aktualisierung:** 04.11.2026
 **Aktueller Meilenstein:** 1 – Text-Chat mit Gedächtnis im Browser (Windows) → **umgesetzt, wartet auf Test durch Timo**
 
 ---
@@ -105,7 +105,9 @@ start-jarvis.bat      Doppelklick-Start unter Windows
 ## 6. Bekannte Einschränkungen / Probleme
 
 - Noch nicht mit echtem API-Schlüssel getestet (in der Entwicklungsumgebung keiner vorhanden) – Formate wurden gegen nachgebaute API-Antworten geprüft. → Erster echter Test über `npm run check`.
-- Standardmodelle für OpenAI (`gpt-5`) und Gemini (`gemini-2.5-flash`) ggf. an aktuelle Modellnamen anpassen.
+- Standardmodell für OpenAI (`gpt-5`) ggf. an aktuelle Modellnamen anpassen.
+- Gemini: echter Test am 04.11.2026 – Schlüssel funktioniert; `gemini-2.5-flash` ist für neue Nutzer abgeschaltet → Standard jetzt `gemini-flash-latest` (zeigt automatisch aufs aktuelle Modell). Neue Modelle waren zeitweise überlastet (Fehler 503), danach war das Gratis-Kontingent erschöpft (429). JARVIS zeigte jeweils die richtige deutsche Fehlermeldung. Eine vollständige Antwort mit Gemini steht noch aus.
+- Einmal hing ein Gemini-Aufruf bis zum Zeitlimit (120 s); nicht reproduziert – beobachten.
 - Automatisches Merken kostet pro Nachricht einen zusätzlichen (kleinen) KI-Aufruf; abschaltbar in den Einstellungen.
 - Server läuft nur, solange das Fenster auf dem PC offen ist (Autostart folgt mit Windows-Phase).
 - Keine Sprachfunktion, kein Internetzugriff, keine Geräteaktionen – JARVIS weiß das und behauptet nichts anderes.

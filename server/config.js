@@ -59,7 +59,7 @@ export const config = {
       },
       gemini: {
         apiKey: str('GEMINI_API_KEY'),
-        model: str('GEMINI_MODEL', 'gemini-2.5-flash'),
+        model: str('GEMINI_MODEL', 'gemini-flash-latest'),
         baseUrl: str('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
       },
     },
