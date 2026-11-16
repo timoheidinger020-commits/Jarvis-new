@@ -3,8 +3,8 @@
 > Diese Datei wird zu Beginn jeder Arbeitssitzung gelesen und nach jedem
 > abgeschlossenen Schritt aktualisiert. Regeln: siehe Master-Prompt, Abschnitt 19.
 
-**Letzte Aktualisierung:** 04.11.2026
-**Aktueller Meilenstein:** 1 – Text-Chat mit Gedächtnis im Browser (Windows) → **umgesetzt, wartet auf Test durch Timo**
+**Letzte Aktualisierung:** 16.11.2026
+**Aktueller Meilenstein:** 1 – Text-Chat mit Gedächtnis im Browser (Windows) → **umgesetzt und mit echtem KI-Anbieter (Gemini) getestet; Test am Windows-PC durch Timo steht aus**
 
 ---
 
@@ -86,7 +86,7 @@ start-jarvis.bat      Doppelklick-Start unter Windows
 - Responsive (PC + Handy), Status-Orb (bereit / denkt nach / antwortet / Fehler), Gesprächsliste, Einstellungen (Anbieter wählen, Auto-Merken an/aus, Geräte abmelden, Funktionsübersicht)
 - Neues Gerät öffnet automatisch das zuletzt aktive Gespräch (am Handy beginnen, am PC weitermachen)
 
-**Tests (33, alle grün):** Anbieter-Streaming & Parameter (gegen simulierte APIs), Fehler/Wiederholungen/Abbruch, Gedächtnis-Logik, Kontextbudget, komplette API (Login, Chat, Gedächtnis, Zusammenfassung, Geräte). Zusätzlich manuell im echten Browser (Desktop + Handy-Größe) durchgespielt.
+**Tests (34, alle grün):** Anbieter-Streaming & Parameter (gegen simulierte APIs), Fehler/Wiederholungen/Abbruch, Gedächtnis-Logik, Kontextbudget, komplette API (Login, Chat, Gedächtnis, Zusammenfassung, Geräte). Zusätzlich manuell im echten Browser (Desktop + Handy-Größe) durchgespielt.
 
 ## 5. Offen / Nächste Schritte
 
@@ -104,10 +104,11 @@ start-jarvis.bat      Doppelklick-Start unter Windows
 
 ## 6. Bekannte Einschränkungen / Probleme
 
-- Noch nicht mit echtem API-Schlüssel getestet (in der Entwicklungsumgebung keiner vorhanden) – Formate wurden gegen nachgebaute API-Antworten geprüft. → Erster echter Test über `npm run check`.
 - Standardmodell für OpenAI (`gpt-5`) ggf. an aktuelle Modellnamen anpassen.
-- Gemini: echter Test am 04.11.2026 – Schlüssel funktioniert; `gemini-2.5-flash` ist für neue Nutzer abgeschaltet → Standard jetzt `gemini-flash-latest` (zeigt automatisch aufs aktuelle Modell). Neue Modelle waren zeitweise überlastet (Fehler 503), danach war das Gratis-Kontingent erschöpft (429). JARVIS zeigte jeweils die richtige deutsche Fehlermeldung. Eine vollständige Antwort mit Gemini steht noch aus.
-- Einmal hing ein Gemini-Aufruf bis zum Zeitlimit (120 s); nicht reproduziert – beobachten.
+- **Echter Test mit Gemini (16.11.2026) erfolgreich:** JARVIS antwortet auf Deutsch im richtigen Ton, merkt sich automatisch Name und Interessen und erinnert sich in einem neuen Gespräch daran.
+- Gemini im Gratis-Tarif ist **langsam** (ca. 10–25 s bis zur Antwort, plus Gedächtnis-Auswertung) und zeitweise überlastet (503) oder am Kontingent (429). Für flüssiges Arbeiten Claude empfohlen.
+- `gemini-flash-latest` hing beim Streaming zweimal bis zum Zeitlimit, `gemini-2.5-flash` ist für neue Nutzer abgeschaltet → Standard ist jetzt `gemini-3.5-flash`. Hintergrundaufgaben nutzen bei Gemini 3 geringe Denktiefe (halbiert die Wartezeit).
+- Claude und OpenAI noch nicht mit echtem Schlüssel getestet (nur gegen nachgebaute API-Antworten).
 - Automatisches Merken kostet pro Nachricht einen zusätzlichen (kleinen) KI-Aufruf; abschaltbar in den Einstellungen.
 - Server läuft nur, solange das Fenster auf dem PC offen ist (Autostart folgt mit Windows-Phase).
 - Keine Sprachfunktion, kein Internetzugriff, keine Geräteaktionen – JARVIS weiß das und behauptet nichts anderes.

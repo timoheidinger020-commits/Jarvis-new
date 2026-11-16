@@ -151,6 +151,16 @@ describe('Gemini', () => {
     assert.deepEqual(req.body.contents.map((c) => c.role), ['user', 'model', 'user']);
     assert.equal(req.body.systemInstruction.parts[0].text, 'Sys');
   });
+
+  test('Hintergrundaufgaben nutzen geringe Denktiefe (nur Gemini 3)', async () => {
+    mock.requests.length = 0;
+    behaviour = (req, res) => sse(res, [[null, { candidates: [{ content: { parts: [{ text: 'ok' }] } }] }]]);
+    const ai = makeAI({ gemini: { apiKey: 'k', model: 'gemini-3.5-flash', baseUrl: mock.url } });
+    await ai.complete('gemini', { system: 's', prompt: 'p', effort: 'low' });
+    await ai.generate('gemini', { system: 's', messages: [{ role: 'user', content: 'x' }] });
+    assert.deepEqual(mock.requests[0].body.generationConfig.thinkingConfig, { thinkingLevel: 'low' });
+    assert.equal(mock.requests[1].body.generationConfig.thinkingConfig, undefined);
+  });
 });
 
 test('nicht eingerichteter Anbieter meldet fehlenden Schlüssel', async () => {

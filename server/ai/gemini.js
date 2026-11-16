@@ -9,7 +9,7 @@ export function createGeminiProvider(cfg, { timeoutMs }) {
     model: cfg.model,
     configured: Boolean(cfg.apiKey),
 
-    async stream({ system, messages, maxTokens = 16000, signal, onText }) {
+    async stream({ system, messages, maxTokens = 16000, signal, onText, effort }) {
       if (!cfg.apiKey) throw new AIError('not_configured', 'Für Gemini ist kein API-Schlüssel eingetragen.', { provider: 'gemini' });
 
       const url = `${cfg.baseUrl.replace(/\/$/, '')}/models/${encodeURIComponent(cfg.model)}:streamGenerateContent?alt=sse`;
@@ -21,7 +21,12 @@ export function createGeminiProvider(cfg, { timeoutMs }) {
             role: m.role === 'assistant' ? 'model' : 'user',
             parts: [{ text: m.content }],
           })),
-          generationConfig: { maxOutputTokens: maxTokens },
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            // Hintergrundaufgaben (Gedächtnis, Zusammenfassung) brauchen
+            // wenig Denkzeit – das macht sie deutlich schneller.
+            ...(effort === 'low' && /^gemini-3/.test(cfg.model) ? { thinkingConfig: { thinkingLevel: 'low' } } : {}),
+          },
         },
         signal,
         timeoutMs,
