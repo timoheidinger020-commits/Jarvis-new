@@ -1,5 +1,6 @@
 // JARVIS – Oberfläche (läuft im Browser, spricht nur mit dem eigenen Server).
 import { renderMarkdown } from './markdown.js';
+import { createVoice, germanBrowserVoices, pickBrowserVoice } from './voice.js';
 
 const $ = (sel) => document.querySelector(sel);
 const el = (tag, attrs = {}, ...children) => {
@@ -18,6 +19,17 @@ const state = {
   conversations: [],
   currentId: localStorageGet('jarvis.currentConversation'),
   controller: null,
+  voiceLoop: false, // Gesprächsmodus aktiv (Zuhören → Antwort → Zuhören …)
+};
+
+const voice = createVoice({ onNotice: (text) => showNotice(text) });
+const pref = {
+  get autoSpeak() { return localStorageGet('jarvis.autoSpeak') === '1'; },
+  set autoSpeak(v) { localStorageSet('jarvis.autoSpeak', v ? '1' : null); },
+  get conversationMode() { return localStorageGet('jarvis.conversationMode') !== '0'; },
+  set conversationMode(v) { localStorageSet('jarvis.conversationMode', v ? null : '0'); },
+  get browserVoice() { return localStorageGet('jarvis.browserVoice'); },
+  set browserVoice(v) { localStorageSet('jarvis.browserVoice', v || null); },
 };
 
 function localStorageGet(key) {
@@ -57,12 +69,16 @@ async function api(path, { method = 'GET', body } = {}) {
 const STATUS = {
   idle: 'Bereit',
   thinking: 'Denkt nach …',
+  listening: 'Hört zu … (Mikrofon aktiv)',
+  talking: 'Spricht …',
   speaking: 'Antwortet …',
   memory: 'Aktualisiert Gedächtnis …',
   error: 'Fehler',
 };
 function setStatus(kind, text) {
-  const orbState = kind === 'memory' ? 'thinking' : kind;
+  // Während JARVIS spricht, bleibt „Spricht …“ sichtbar.
+  if (voice.isSpeaking() && (kind === 'idle' || kind === 'memory')) return;
+  const orbState = kind === 'memory' ? 'thinking' : kind === 'talking' ? 'speaking' : kind;
   document.querySelectorAll('.orb').forEach((o) => { o.dataset.state = orbState; });
   $('#status-text').textContent = text || STATUS[kind] || '';
 }
@@ -122,6 +138,12 @@ async function start() {
   else newConversation();
   setStatus('idle');
   $('#input').focus();
+
+  // Schnellstart „Mit JARVIS sprechen“ (App-Verknüpfung auf dem Handy)
+  if (new URLSearchParams(location.search).get('voice') === '1') {
+    history.replaceState(null, '', '/');
+    startListening();
+  }
 }
 
 function updateProviderNotice() {
@@ -198,7 +220,10 @@ async function openConversation(id) {
     const box = $('#messages');
     box.replaceChildren();
     if (!messages.length) box.append(welcomeNode());
-    for (const m of messages) box.append(messageNode(m.role, m.content));
+    for (const m of messages) {
+      box.append(messageNode(m.role, m.content));
+      if (m.role === 'assistant') box.append(speakActions(m.content));
+    }
     renderConversationList();
     scrollToBottom(true);
   } catch (err) {
@@ -241,7 +266,14 @@ function scrollToBottom(force = false) {
   if (force || nearBottom) box.scrollTop = box.scrollHeight;
 }
 
-async function send(text) {
+function send(text, opts) {
+  const promise = sendInner(text, opts);
+  state.sendPromise = promise;
+  promise.finally(() => { if (state.sendPromise === promise) state.sendPromise = null; });
+  return promise;
+}
+
+async function sendInner(text, { viaVoice = false, onAnswer } = {}) {
   const box = $('#messages');
   box.querySelector('.welcome')?.remove();
   box.append(messageNode('user', text));
@@ -256,6 +288,7 @@ async function send(text) {
   setStatus('thinking');
 
   let answer = '';
+  let completed = false;
   let renderQueued = false;
   const render = () => {
     renderQueued = false;
@@ -267,10 +300,10 @@ async function send(text) {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ conversationId: state.currentId, text }),
+      body: JSON.stringify({ conversationId: state.currentId, text, viaVoice }),
       signal: controller.signal,
     });
-    if (res.status === 401) { showLogin(); return; }
+    if (res.status === 401) { showLogin(); return null; }
     if (!res.ok || !res.body) throw new Error(`Serverfehler ${res.status}`);
 
     for await (const { event, data } of readEvents(res.body)) {
@@ -290,6 +323,9 @@ async function send(text) {
         answer = data.assistantMessage.content;
         render();
         bubble.classList.remove('streaming');
+        assistantNode.after(speakActions(answer));
+        completed = true;
+        onAnswer?.(answer); // z. B. sofort vorlesen – Gedächtnis läuft parallel weiter
         if (state.overview?.settings?.['memory.autoExtract']) setStatus('memory');
       } else if (event === 'memory') {
         showMemoryChanges(data.changes);
@@ -300,6 +336,7 @@ async function send(text) {
       }
     }
     setStatus('idle');
+    return completed ? answer : null;
   } catch (err) {
     bubble.classList.remove('streaming');
     if (controller.signal.aborted) {
@@ -312,6 +349,7 @@ async function send(text) {
       setStatus('error', 'Fehler – Details im Chat');
     }
     scrollToBottom(true);
+    return null;
   } finally {
     state.controller = null;
     setComposerBusy(false);
@@ -363,9 +401,9 @@ function showMemoryChanges(changes) {
 }
 
 function setComposerBusy(busy) {
-  $('#send').hidden = busy;
-  $('#stop').hidden = !busy;
-  $('#input').disabled = false;
+  const active = busy || voice.isSpeaking();
+  $('#send').hidden = active;
+  $('#stop').hidden = !active;
 }
 
 const input = $('#input');
@@ -387,9 +425,130 @@ $('#composer').addEventListener('submit', (e) => {
   if (!text || state.controller) return;
   input.value = '';
   autosize();
-  send(text);
+  state.voiceLoop = false;
+  voice.stopSpeaking();
+  send(text, { onAnswer: (answer) => { if (pref.autoSpeak) speakAnswer(answer); } });
 });
-$('#stop').addEventListener('click', () => state.controller?.abort());
+$('#stop').addEventListener('click', () => {
+  state.voiceLoop = false;
+  state.controller?.abort();
+  voice.stopListening();
+  stopSpeech();
+});
+
+// ---------------- Stimme ----------------
+function voiceOptions() {
+  const settings = state.overview?.settings || {};
+  return {
+    engine: settings['voice.engine'] === 'gemini' && state.overview?.voice?.geminiAvailable ? 'gemini' : 'browser',
+    voiceName: settings['voice.name'],
+    browserVoiceName: pref.browserVoice,
+  };
+}
+
+function showVoiceBar(kind) {
+  const bar = $('#voice-bar');
+  bar.hidden = !kind;
+  bar.classList.toggle('speaking', kind === 'speaking');
+  $('#voice-bar-text').textContent =
+    kind === 'listening' ? 'Mikrofon aktiv – ich höre zu … (zum Beenden 🎤 antippen)'
+      : kind === 'speaking' ? 'JARVIS spricht … (Stopp oder 🎤 unterbricht)' : '';
+  $('#mic').classList.toggle('active', kind === 'listening');
+  $('#mic').setAttribute('aria-label', kind === 'listening' ? 'Zuhören beenden' : 'Spracheingabe starten');
+}
+
+/** Liest eine Antwort vor; danach ggf. automatisch weiter zuhören. */
+async function speakAnswer(text, { continueListening = false } = {}) {
+  setStatus('talking');
+  showVoiceBar('speaking');
+  const speaking = voice.speak(text, voiceOptions());
+  setComposerBusy(Boolean(state.controller)); // zeigt „Stopp“, solange gesprochen wird
+  const finished = await speaking;
+  if (!voice.isListening()) showVoiceBar(null);
+  setComposerBusy(Boolean(state.controller));
+  if (!voice.isListening() && !state.controller) setStatus('idle');
+  if (finished && continueListening && state.voiceLoop && pref.conversationMode) {
+    if (state.sendPromise) await state.sendPromise; // Gedächtnis-Auswertung abwarten
+    if (state.voiceLoop && !voice.isSpeaking() && !voice.isListening()) startListening();
+  }
+}
+
+function stopSpeech() {
+  voice.stopSpeaking();
+  showVoiceBar(voice.isListening() ? 'listening' : null);
+  setComposerBusy(Boolean(state.controller));
+  if (!state.controller && !voice.isListening()) setStatus('idle');
+}
+
+async function startListening() {
+  if (state.controller) return;
+  const problem = voice.micProblem();
+  if (problem) { showNotice(problem); return; }
+  voice.stopSpeaking(); // JARVIS unterbrechen, wenn er gerade spricht
+  showVoiceBar('listening');
+  setStatus('listening');
+  setComposerBusy(false);
+  const before = input.value;
+  let text = '';
+  try {
+    text = await voice.listen({ onInterim: (t) => { input.value = t; autosize(); } });
+  } catch (err) {
+    state.voiceLoop = false;
+    showNotice(err.message);
+  }
+  showVoiceBar(null);
+  if (!text) {
+    input.value = before;
+    autosize();
+    state.voiceLoop = false;
+    setStatus('idle');
+    return;
+  }
+  input.value = '';
+  autosize();
+  state.voiceLoop = true;
+  const answer = await send(text, {
+    viaVoice: true,
+    onAnswer: (a) => speakAnswer(a, { continueListening: true }),
+  });
+  if (!answer) state.voiceLoop = false;
+}
+
+$('#mic').addEventListener('click', () => {
+  if (voice.isListening()) { voice.stopListening(); return; }
+  startListening();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.code === 'Space') {
+    e.preventDefault();
+    if (voice.isListening()) voice.stopListening();
+    else startListening();
+  }
+});
+
+function setSpeakToggle(on) {
+  const btn = $('#speak-toggle');
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.textContent = on ? '🔊' : '🔈';
+  btn.title = on ? 'Antworten werden vorgelesen (antippen zum Ausschalten)' : 'Antworten immer vorlesen';
+}
+setSpeakToggle(pref.autoSpeak);
+$('#speak-toggle').addEventListener('click', () => {
+  pref.autoSpeak = !pref.autoSpeak;
+  setSpeakToggle(pref.autoSpeak);
+  if (!pref.autoSpeak) stopSpeech();
+  const box = $('#setting-auto-speak');
+  if (box) box.checked = pref.autoSpeak;
+});
+if (voice.micProblem()) {
+  $('#mic').title = voice.micProblem();
+}
+
+function speakActions(content) {
+  return el('div', { class: 'msg-actions' },
+    el('button', { type: 'button', onclick: () => { state.voiceLoop = false; speakAnswer(content); } }, '▶ Vorlesen'),
+  );
+}
 
 // ---------------- Panels ----------------
 function openPanel(id) {
@@ -564,16 +723,73 @@ function renderSettings() {
     state.overview.settings = res.settings;
   };
 
+  renderVoiceSettings();
+
   const featureNames = {
     textChat: 'Text-Chat',
     memory: 'Langzeitgedächtnis',
-    voice: 'Sprache (folgt in Phase 3)',
+    voice: 'Sprache (Mikrofon & Vorlesen)',
     deviceActions: 'Geräte-Steuerung (folgt später)',
   };
   $('#feature-list').replaceChildren(
     ...Object.entries(features).map(([k, on]) => el('li', { class: on ? 'on' : '' }, featureNames[k] || k)),
   );
   $('#version').textContent = `JARVIS Version ${version} · angemeldet als „${state.overview.device}“`;
+}
+
+function renderVoiceSettings() {
+  const { voice: voiceInfo, settings } = state.overview;
+  const engine = voiceOptions().engine;
+  const list = $('#voice-engine-list');
+  list.replaceChildren();
+  const engines = [
+    { id: 'gemini', label: 'Natürliche Stimme (Google Gemini)', detail: voiceInfo.geminiAvailable ? 'beste Qualität, braucht Internet' : 'GEMINI_API_KEY fehlt in der .env', available: voiceInfo.geminiAvailable },
+    { id: 'browser', label: 'Gerätestimme', detail: 'kostenlos, Qualität je nach Gerät', available: Boolean(window.speechSynthesis) },
+  ];
+  for (const e of engines) {
+    const radio = el('input', { type: 'radio', name: 'voice-engine', value: e.id, checked: e.id === engine, disabled: !e.available });
+    radio.addEventListener('change', async () => {
+      try {
+        const res = await api('/settings', { method: 'PATCH', body: { voiceEngine: e.id } });
+        state.overview.settings = res.settings;
+        renderVoiceSettings();
+      } catch (err) { alert(err.message); renderVoiceSettings(); }
+    });
+    list.append(el('label', { class: `provider${e.available ? '' : ' unavailable'}` },
+      radio, el('div', {}, el('div', {}, e.label), el('div', { class: 'model' }, e.detail))));
+  }
+
+  const select = $('#voice-name');
+  select.replaceChildren(...voiceInfo.voices.map((v) => el('option', { value: v.id }, `${v.id} – ${v.description}`)));
+  select.value = settings['voice.name'];
+  select.onchange = async () => {
+    const res = await api('/settings', { method: 'PATCH', body: { voiceName: select.value } });
+    state.overview.settings = res.settings;
+  };
+  $('#gemini-voice-row').hidden = engine !== 'gemini';
+
+  const bsel = $('#browser-voice');
+  const fill = () => {
+    const voices = germanBrowserVoices();
+    const chosen = pickBrowserVoice(pref.browserVoice);
+    bsel.replaceChildren(...(voices.length
+      ? voices.map((v) => el('option', { value: v.name }, v.name))
+      : [el('option', { value: '' }, 'Keine deutsche Gerätestimme gefunden')]));
+    if (chosen) bsel.value = chosen.name;
+  };
+  fill();
+  if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = fill;
+  bsel.onchange = () => { pref.browserVoice = bsel.value; };
+  $('#browser-voice-row').hidden = engine !== 'browser';
+
+  $('#voice-test').onclick = () => speakAnswer('Guten Tag. Ich bin JARVIS. Alle Systeme sind einsatzbereit.');
+  const autoSpeak = $('#setting-auto-speak');
+  autoSpeak.checked = pref.autoSpeak;
+  autoSpeak.onchange = () => { pref.autoSpeak = autoSpeak.checked; setSpeakToggle(pref.autoSpeak); };
+  const conv = $('#setting-conversation-mode');
+  conv.checked = pref.conversationMode;
+  conv.onchange = () => { pref.conversationMode = conv.checked; };
+  $('#mic-hint').textContent = voice.micProblem() || 'Tipp: 🎤 antippen und sprechen. Am PC geht auch Strg + Leertaste. Die Spracherkennung läuft über den Dienst des Browsers (Google bzw. Microsoft).';
 }
 
 async function loadDevices() {

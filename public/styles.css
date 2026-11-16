@@ -93,6 +93,11 @@ textarea { resize: none; }
   background: radial-gradient(circle, #ffd6da 0 12%, var(--danger) 22%, #4a0f18 58%, transparent 70%);
   box-shadow: 0 0 14px rgba(255, 93, 108, .4);
 }
+.orb[data-state="listening"] {
+  background: radial-gradient(circle at 50% 50%, #fff0f0 0 12%, #ff5d6c 24%, #4a0f18 58%, transparent 70%);
+  box-shadow: 0 0 18px rgba(255, 93, 108, .55);
+  animation: pulse 1.2s ease-in-out infinite;
+}
 @keyframes breathe { 50% { box-shadow: 0 0 22px var(--accent-glow), inset 0 0 8px rgba(57,208,255,.6); } }
 @keyframes pulse { 50% { transform: scale(1.08); box-shadow: 0 0 26px var(--accent-glow); } }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -292,4 +297,26 @@ dialog p { margin: 0 0 16px; }
 @media (max-width: 420px) {
   .status-text { max-width: 120px; }
   .send { padding: 0 12px; }
+}
+
+/* ---------- Stimme ---------- */
+.composer .mic, .composer .speak-toggle { height: 46px; width: 46px; flex: none; border-radius: 14px; border: 1px solid var(--line-2); background: var(--panel); font-size: 19px; padding: 0; }
+.composer .mic.active { background: #4a0f18; border-color: var(--danger); box-shadow: 0 0 0 3px rgba(255, 93, 108, .25); animation: pulse 1.2s ease-in-out infinite; }
+.composer .mic:disabled { opacity: .4; }
+.composer .speak-toggle[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 3px rgba(57, 208, 255, .12); }
+.voice-bar {
+  max-width: 820px; width: calc(100% - 32px); margin: 0 auto;
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; border-radius: 10px;
+  background: #2a0b11; border: 1px solid #6a2230; color: #ffd3d8; font-size: 14px;
+}
+.voice-bar.speaking { background: #08202f; border-color: #1d4b6e; color: #cdeeff; }
+.voice-bar.speaking .rec-dot { background: var(--accent); }
+.rec-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); flex: none; animation: blink 1s steps(2) infinite; }
+.msg-actions { max-width: 820px; margin: -10px auto 14px; display: flex; gap: 6px; }
+.msg-actions button { font-size: 12px; padding: 2px 9px; border-radius: 7px; background: transparent; color: var(--muted); }
+.msg-actions button:hover { color: var(--text); }
+@media (max-width: 820px) {
+  .composer .mic, .composer .speak-toggle { width: 42px; }
+  .voice-bar { width: calc(100% - 20px); }
 }

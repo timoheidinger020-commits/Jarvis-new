@@ -36,10 +36,10 @@ export function createConversationStore(db) {
       db.prepare('UPDATE conversations SET updated_at = ? WHERE id = ?').run(now(), id);
     },
 
-    addMessage(conversationId, { role, content, provider = null, model = null }) {
+    addMessage(conversationId, { role, content, provider = null, model = null, viaVoice = false }) {
       const { lastInsertRowid } = db
-        .prepare('INSERT INTO messages (conversation_id, role, content, provider, model, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(conversationId, role, content, provider, model, now());
+        .prepare('INSERT INTO messages (conversation_id, role, content, provider, model, via_voice, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(conversationId, role, content, provider, model, viaVoice ? 1 : 0, now());
       this.touch(conversationId);
       return db.prepare('SELECT * FROM messages WHERE id = ?').get(Number(lastInsertRowid));
     },

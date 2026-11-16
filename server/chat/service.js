@@ -10,7 +10,7 @@ const MAX_USER_CHARS = 20000;
 export function createChatService({ ai, conversations, memory, extractMemories, settings, config, log = console }) {
   const providerId = () => settings.get('ai.provider');
 
-  async function sendMessage({ conversationId, text, signal, emit }) {
+  async function sendMessage({ conversationId, text, viaVoice = false, signal, emit }) {
     const userText = String(text ?? '').trim();
     if (!userText) throw Object.assign(new Error('Die Nachricht ist leer.'), { status: 400 });
     if (userText.length > MAX_USER_CHARS) {
@@ -21,7 +21,7 @@ export function createChatService({ ai, conversations, memory, extractMemories, 
     if (conversationId && !conversation) throw Object.assign(new Error('Gespräch nicht gefunden.'), { status: 404 });
     if (!conversation) conversation = conversations.create();
 
-    const userMessage = conversations.addMessage(conversation.id, { role: 'user', content: userText });
+    const userMessage = conversations.addMessage(conversation.id, { role: 'user', content: userText, viaVoice });
     if (conversation.title === DEFAULT_TITLE) {
       conversation = conversations.rename(conversation.id, makeTitle(userText));
     }

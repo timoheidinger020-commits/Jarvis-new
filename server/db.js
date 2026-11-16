@@ -68,6 +68,8 @@ const MIGRATIONS = [
     value TEXT NOT NULL
   );
   `,
+  // 2: merken, ob eine Nachricht gesprochen wurde (für vorlesbare Antworten)
+  `ALTER TABLE messages ADD COLUMN via_voice INTEGER NOT NULL DEFAULT 0;`,
 ];
 
 export function openDatabase(dbPath) {

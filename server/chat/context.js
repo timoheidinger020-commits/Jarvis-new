@@ -26,7 +26,8 @@ export function timestamp(iso) {
 export function toModelMessages(rows) {
   const out = [];
   for (const row of rows) {
-    const content = row.role === 'user' ? `[${timestamp(row.created_at)}] ${row.content}` : row.content;
+    const content =
+      row.role === 'user' ? `[${timestamp(row.created_at)}${row.via_voice ? ' · gesprochen' : ''}] ${row.content}` : row.content;
     const last = out[out.length - 1];
     // Aufeinanderfolgende Nachrichten derselben Rolle zusammenführen
     // (z. B. wenn eine Antwort wegen eines Fehlers fehlt).

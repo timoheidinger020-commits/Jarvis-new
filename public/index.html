@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#05090f">
   <title>JARVIS</title>
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/icon-192.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/styles.css">
   <script type="module" src="/app.js"></script>
@@ -66,10 +68,16 @@
         </div>
       </section>
 
+      <div id="voice-bar" class="voice-bar" hidden>
+        <span class="rec-dot" aria-hidden="true"></span>
+        <span id="voice-bar-text">Mikrofon aktiv – ich höre zu …</span>
+      </div>
       <form id="composer" class="composer">
-        <textarea id="input" rows="1" placeholder="Nachricht an JARVIS …" aria-label="Nachricht" maxlength="20000"></textarea>
+        <button id="mic" type="button" class="icon-btn mic" aria-label="Spracheingabe starten" title="Sprechen (Strg+Leertaste)">🎤</button>
+        <textarea id="input" rows="1" placeholder="Frag JARVIS …" aria-label="Nachricht" maxlength="20000"></textarea>
         <button id="send" type="submit" class="primary send" aria-label="Senden">Senden</button>
-        <button id="stop" type="button" class="danger send" hidden aria-label="Antwort stoppen">Stopp</button>
+        <button id="stop" type="button" class="danger send" hidden aria-label="Stoppen">Stopp</button>
+        <button id="speak-toggle" type="button" class="icon-btn speak-toggle" aria-pressed="false" aria-label="Antworten vorlesen" title="Antworten immer vorlesen">🔈</button>
       </form>
     </main>
 
@@ -111,6 +119,25 @@
         <input id="setting-auto-memory" type="checkbox">
         <span>Wichtige Informationen automatisch merken</span>
       </label>
+
+      <h3>Stimme</h3>
+      <div id="voice-engine-list" class="provider-list"></div>
+      <div class="row" id="gemini-voice-row">
+        <select id="voice-name" aria-label="Gemini-Stimme"></select>
+      </div>
+      <div class="row" id="browser-voice-row">
+        <select id="browser-voice" aria-label="Gerätestimme"></select>
+      </div>
+      <button id="voice-test" type="button">▶ Stimme probehören</button>
+      <label class="switch">
+        <input id="setting-auto-speak" type="checkbox">
+        <span>Antworten immer vorlesen <span class="muted">(dieses Gerät)</span></span>
+      </label>
+      <label class="switch">
+        <input id="setting-conversation-mode" type="checkbox">
+        <span>Gesprächsmodus: nach gesprochener Antwort weiter zuhören <span class="muted">(dieses Gerät)</span></span>
+      </label>
+      <p id="mic-hint" class="muted small"></p>
 
       <h3>Verbundene Geräte</h3>
       <div id="device-list" class="device-list"></div>

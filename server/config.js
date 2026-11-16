@@ -72,6 +72,11 @@ export const config = {
     maxInPrompt: int('MEMORY_MAX_IN_PROMPT', 60),
   },
 
+  voice: {
+    // Modell für die Sprachausgabe (Text → Stimme) bei Google Gemini
+    ttsModel: str('GEMINI_TTS_MODEL', 'gemini-3.8-flash-tts'),
+  },
+
   context: {
     maxChars: int('CONTEXT_MAX_CHARS', 24000),
   },

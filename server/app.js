@@ -10,16 +10,23 @@ import { openDatabase } from './db.js';
 import { createExtractor } from './memory/extractor.js';
 import { CATEGORIES, createMemoryStore } from './memory/store.js';
 import { createSettings } from './settings.js';
+import { createTTS, GEMINI_VOICES } from './voice/tts.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
-export function createApp(config, { ai: aiOverride, db: dbOverride, log = console } = {}) {
+export function createApp(config, { ai: aiOverride, db: dbOverride, tts: ttsOverride, log = console } = {}) {
   const db = dbOverride || openDatabase(config.dbPath);
   const ai = aiOverride || createAI(config.ai);
+  const tts =
+    ttsOverride ||
+    createTTS(config.ai.providers.gemini || {}, { model: config.voice?.ttsModel || 'gemini-3.8-flash-tts' });
   const auth = createAuth(db, { password: config.password });
   const settings = createSettings(db, {
     'ai.provider': config.ai.defaultProvider,
     'memory.autoExtract': true,
+    // 'gemini' = natürliche Google-Stimme, 'browser' = Stimme des Geräts
+    'voice.engine': tts.configured ? 'gemini' : 'browser',
+    'voice.name': 'Charon',
   });
   const conversations = createConversationStore(db);
   const memory = createMemoryStore(db);
@@ -41,7 +48,7 @@ export function createApp(config, { ai: aiOverride, db: dbOverride, log = consol
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+      "default-src 'self'; img-src 'self' data:; media-src 'self' blob:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
     );
     next();
   });
@@ -84,10 +91,14 @@ export function createApp(config, { ai: aiOverride, db: dbOverride, log = consol
       activeProvider: active,
       settings: settings.all(),
       memoryCategories: CATEGORIES,
+      voice: {
+        geminiAvailable: tts.configured,
+        voices: Object.entries(GEMINI_VOICES).map(([id, description]) => ({ id, description })),
+      },
       features: {
         textChat: true,
         memory: true,
-        voice: false, // Phase 3
+        voice: true,
         deviceActions: false, // Phase 5/6
       },
     });
@@ -95,7 +106,18 @@ export function createApp(config, { ai: aiOverride, db: dbOverride, log = consol
 
   // Einstellungen
   api.patch('/settings', (req, res) => {
-    const { aiProvider, memoryAutoExtract } = req.body || {};
+    const { aiProvider, memoryAutoExtract, voiceEngine, voiceName } = req.body || {};
+    if (voiceEngine !== undefined) {
+      if (!['gemini', 'browser'].includes(voiceEngine)) return res.status(400).json({ error: 'Unbekannte Stimme.' });
+      if (voiceEngine === 'gemini' && !tts.configured) {
+        return res.status(400).json({ error: 'Für die Gemini-Stimme ist kein GEMINI_API_KEY eingetragen.' });
+      }
+      settings.set('voice.engine', voiceEngine);
+    }
+    if (voiceName !== undefined) {
+      if (!GEMINI_VOICES[voiceName]) return res.status(400).json({ error: 'Unbekannte Stimme.' });
+      settings.set('voice.name', voiceName);
+    }
     if (aiProvider !== undefined) {
       const provider = ai.list().find((p) => p.id === aiProvider);
       if (!provider) return res.status(400).json({ error: 'Unbekannter Anbieter.' });
@@ -145,6 +167,7 @@ export function createApp(config, { ai: aiOverride, db: dbOverride, log = consol
       await chat.sendMessage({
         conversationId: req.body?.conversationId || null,
         text: req.body?.text,
+        viaVoice: Boolean(req.body?.viaVoice),
         signal: controller.signal,
         emit,
       });
@@ -155,6 +178,26 @@ export function createApp(config, { ai: aiOverride, db: dbOverride, log = consol
       finished = true;
       emit('end', {});
       res.end();
+    }
+  });
+
+  // Sprachausgabe: Text → WAV-Audio
+  api.post('/tts', async (req, res) => {
+    const controller = new AbortController();
+    res.on('close', () => { if (!res.writableEnded) controller.abort(); });
+    try {
+      const audio = await tts.synthesize(req.body?.text, {
+        voice: req.body?.voice || settings.get('voice.name'),
+        signal: controller.signal,
+      });
+      res.setHeader('Content-Type', 'audio/wav');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(audio);
+    } catch (err) {
+      if (controller.signal.aborted) return;
+      const payload = errorPayload(err);
+      log.warn?.(`[Stimme] ${payload.message}`);
+      res.status(err.status && err.status < 500 && !err.code ? err.status : 502).json({ error: payload.message, code: payload.code });
     }
   });
 

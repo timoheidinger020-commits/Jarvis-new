@@ -4,8 +4,9 @@ JARVIS ist dein persönlicher KI-Assistent für Windows-PC und Android-Smartphon
 Er führt natürliche Gespräche auf Deutsch, merkt sich Wichtiges über dich und
 nutzt auf allen Geräten dasselbe Gedächtnis.
 
-**Aktueller Stand (Meilenstein 1):** Text-Chat mit Langzeitgedächtnis im Browser.
-Sprache, Android-App und Geräte-Steuerung folgen schrittweise – siehe
+**Aktueller Stand:** Text- und Sprach-Chat mit Langzeitgedächtnis, nutzbar am
+PC und auf dem Handy (als App auf dem Startbildschirm). Geräte-Steuerung,
+Notizen/Erinnerungen und das Aktivierungswort folgen – siehe
 [`PROJECT_STATE.md`](PROJECT_STATE.md).
 
 ---
@@ -121,6 +122,65 @@ Beenden: Fenster schließen oder `Strg + C`.
 
 ---
 
+## Mit JARVIS sprechen
+
+1. Tippe auf **🎤** links neben dem Eingabefeld (am PC auch `Strg + Leertaste`).
+2. Beim ersten Mal fragt der Browser nach dem **Mikrofon** → **Zulassen**.
+3. Sprich deine Frage. Solange das Mikrofon aktiv ist, leuchtet oben ein **roter Balken** und der Kreis wird rot.
+4. JARVIS antwortet und **liest die Antwort vor**. Danach hört er automatisch weiter zu
+   (Gesprächsmodus) – sag einfach nichts, dann hört er auf.
+5. **Unterbrechen:** „Stopp“ oder 🎤 antippen.
+
+- **🔈/🔊** rechts: Antworten auf geschriebene Fragen ebenfalls vorlesen.
+- **„▶ Vorlesen“** unter jeder Antwort liest sie (nochmal) vor.
+- Unter **Einstellungen → Stimme** wählst du:
+  - **Natürliche Stimme (Google Gemini)** – klingt am besten, braucht `GEMINI_API_KEY`. Verschiedene männliche Stimmen zur Auswahl („Probehören“).
+  - **Gerätestimme** – kostenlos, ohne Schlüssel. Tipp: Im Browser **Microsoft Edge** gibt es unter Windows die sehr natürliche Stimme „Conrad“.
+
+✅ **Prüfen:** Nach „Probehören“ hörst du JARVIS sprechen.
+
+> Hinweise: Spracheingabe funktioniert in **Chrome** und **Edge** (nicht Firefox).
+> Die Erkennung läuft über den Dienst des Browsers (Google bzw. Microsoft).
+> Das Mikrofon ist **nur aktiv, wenn du es einschaltest** – nie im Hintergrund.
+
+---
+
+## JARVIS auf dem Handy (Samsung)
+
+Das Handy nutzt denselben JARVIS wie der PC – gleiche Gespräche, gleiches Gedächtnis.
+Dafür muss JARVIS auf dem PC laufen. Für eine **sichere Verbindung** (und damit das
+Mikrofon am Handy funktioniert) nutzen wir **Tailscale** – kostenlos für private Nutzung.
+Damit klappt es zu Hause **und unterwegs** über mobile Daten.
+
+**Am PC:**
+1. <https://tailscale.com/download> öffnen, Windows-Version installieren.
+2. Tailscale starten und mit deinem Google-Konto anmelden.
+3. Im JARVIS-Ordner ein schwarzes Fenster öffnen (Adresszeile → `cmd`) und eingeben:
+
+```
+tailscale serve --bg 3000
+```
+
+   Beim ersten Mal erscheint evtl. ein Link, um **HTTPS zu aktivieren** – Link öffnen, bestätigen, Befehl nochmal eingeben.
+
+✅ **Prüfen:** Es erscheint eine Adresse wie `https://dein-pc.tail1234.ts.net` – notiere sie.
+
+**Am Handy:**
+1. Im Play Store die App **Tailscale** installieren und mit **demselben** Google-Konto anmelden. Den Schalter auf „Verbunden“ stellen.
+2. In **Chrome** die notierte Adresse öffnen und mit deinem JARVIS-Passwort anmelden (Gerätename z. B. „S26 Ultra“).
+3. Chrome-Menü **⋮** → **„Zum Startbildschirm hinzufügen“** bzw. **„App installieren“**.
+
+✅ **Prüfen:** Auf dem Startbildschirm ist ein **JARVIS-Symbol**. Es öffnet JARVIS wie
+eine App. Dein Gespräch vom PC ist da, und 🎤 funktioniert.
+
+**Schnellstart:** Symbol **lange gedrückt halten** → **„Mit JARVIS sprechen“** – JARVIS
+öffnet sich und hört sofort zu. (Diese Verknüpfung kannst du auch auf den Startbildschirm ziehen.)
+
+> Hinweis: Ein echtes „Hey JARVIS“ im Hintergrund ist mit einer Web-App technisch nicht
+> möglich – dafür ist später eine eigene Android-App nötig (siehe PROJECT_STATE.md).
+
+---
+
 ## Kosten (Stand Oktober 2026 – bitte auf den Preisseiten prüfen)
 
 JARVIS selbst ist kostenlos. Kosten entstehen nur beim KI-Anbieter, abgerechnet pro Nutzung:
@@ -130,7 +190,9 @@ JARVIS selbst ist kostenlos. Kosten entstehen nur beim KI-Anbieter, abgerechnet 
 | **Claude Opus 5.5** (Standard) | ca. 2–6 Cent | beste Qualität |
 | Claude Sonnet 5.5 | ca. 1–3 Cent | sehr gut, günstiger |
 | Claude Haiku 5.5 | unter 0,2 Cent | schnell, einfacher |
-| Google Gemini (Flash) | kostenloses Kontingent | Limits pro Tag; im Gratis-Tarif darf Google Eingaben zur Verbesserung nutzen |
+| Google Gemini (Flash) | kostenloses Kontingent | Limits pro Tag, teils langsam; im Gratis-Tarif darf Google Eingaben zur Verbesserung nutzen |
+| Gemini-Stimme (Vorlesen) | kostenloses Kontingent | gleicher Schlüssel; ist es aufgebraucht, nutzt JARVIS automatisch die Gerätestimme |
+| Tailscale (Handy-Zugriff) | kostenlos | privater Tarif |
 
 \*Grobe Schätzung inkl. Gedächtnis-Auswertung; lange Gespräche kosten mehr.
 Bei ~10 Nachrichten pro Tag mit Opus 5.5 sind das grob **6–18 € im Monat**.
@@ -155,6 +217,9 @@ setzen (oder in JARVIS unter „Einstellungen“ umschalten).
 | `kein Guthaben` | In der Anthropic-Konsole unter „Billing“ Guthaben aufladen. |
 | `Port 3000 ist schon belegt` | JARVIS läuft schon in einem anderen Fenster – oder `PORT=3001` in der `.env`. |
 | `'npm' wird nicht erkannt` | Node.js installieren (Schritt 1) und den PC neu starten. |
+| 🎤 ist ausgegraut / „nur über eine sichere Verbindung“ | Am Handy die `https://…ts.net`-Adresse nutzen (siehe „JARVIS auf dem Handy“), nicht die IP-Adresse. |
+| „Mikrofonzugriff verweigert“ | Schloss-Symbol links neben der Adresse → Mikrofon → Zulassen. |
+| Gemini: „überlastet“ oder „Kontingent“ | Kurz warten. Im Gratis-Tarif normal. |
 
 ---
 

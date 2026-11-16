@@ -4,7 +4,16 @@
 > abgeschlossenen Schritt aktualisiert. Regeln: siehe Master-Prompt, Abschnitt 19.
 
 **Letzte Aktualisierung:** 16.11.2026
-**Aktueller Meilenstein:** 1 – Text-Chat mit Gedächtnis im Browser (Windows) → **umgesetzt und mit echtem KI-Anbieter (Gemini) getestet; Test am Windows-PC durch Timo steht aus**
+**Stand:** Meilensteine 1–3 umgesetzt (Text-Chat + Gedächtnis, Stimme, Handy-Nutzung als App) und mit echtem Gemini getestet. **Test am eigenen PC/Handy durch Timo steht aus.**
+
+| Meilenstein | Status |
+|---|---|
+| 1 – Text-Chat mit Gedächtnis (PC-Browser) | ✅ fertig, echt getestet (Gemini) |
+| 2 – Stimme (sprechen, vorlesen, unterbrechen, Gesprächsmodus) | ✅ fertig, echt getestet (Gemini-Stimme) |
+| 3 – Handy (installierbare App, sicherer Zugriff per Tailscale, Schnellstart) | ✅ fertig, Anleitung im README; Test auf echtem Handy steht aus |
+| 4 – Notizen & Erinnerungen | ⏳ offen |
+| 5 – PC-Steuerung (Programme/Webseiten öffnen, Dateien suchen) | ⏳ offen |
+| 6 – „Hey JARVIS“ im Hintergrund (eigene Android-App / Windows-Dienst) | ⏳ offen |
 
 ---
 
@@ -55,7 +64,8 @@ server/
   ai/                 index.js (Registry, Wiederholungen), anthropic.js, openai.js, gemini.js, sse.js, errors.js
   chat/               service.js (Ablauf), context.js (Kontextstrategie), prompts.js (Persönlichkeit), conversations.js
   memory/             store.js (Gedächtnis-CRUD + Suche), extractor.js (automatisches Merken)
-public/               index.html, app.js, markdown.js, styles.css, manifest, icon
+  voice/tts.js        Sprachausgabe über Gemini TTS (austauschbar)
+public/               index.html, app.js, voice.js (Mikrofon/Vorlesen), markdown.js, styles.css, manifest, Icons
 test/                 automatische Tests (node --test), simulierte KI-Anbieter
 start-jarvis.bat      Doppelklick-Start unter Windows
 ```
@@ -86,17 +96,27 @@ start-jarvis.bat      Doppelklick-Start unter Windows
 - Responsive (PC + Handy), Status-Orb (bereit / denkt nach / antwortet / Fehler), Gesprächsliste, Einstellungen (Anbieter wählen, Auto-Merken an/aus, Geräte abmelden, Funktionsübersicht)
 - Neues Gerät öffnet automatisch das zuletzt aktive Gespräch (am Handy beginnen, am PC weitermachen)
 
-**Tests (34, alle grün):** Anbieter-Streaming & Parameter (gegen simulierte APIs), Fehler/Wiederholungen/Abbruch, Gedächtnis-Logik, Kontextbudget, komplette API (Login, Chat, Gedächtnis, Zusammenfassung, Geräte). Zusätzlich manuell im echten Browser (Desktop + Handy-Größe) durchgespielt.
+**Phase 3 – Stimme**
+- Spracheingabe per 🎤 (Browser-Spracherkennung, Deutsch; Chrome/Edge, auch Android), am PC zusätzlich Strg+Leertaste
+- Sprachausgabe: natürliche Gemini-Stimme (8 männliche Stimmen wählbar, Probehören) oder Gerätestimme (bevorzugt natürliche männliche deutsche Stimme)
+- Unterbrechen jederzeit (Stopp oder 🎤), Gesprächsmodus (nach der Antwort automatisch weiter zuhören), „▶ Vorlesen“ unter jeder Antwort, Vorlese-Schalter 🔈/🔊
+- JARVIS spricht sofort nach der Antwort (Gedächtnis-Auswertung läuft parallel); lange Antworten in zwei Teilen (schneller Start)
+- Automatischer Rückfall auf die Gerätestimme, wenn die Gemini-Stimme nicht verfügbar ist (Kontingent, Fehler) – mit Hinweis
+- Gesprochene Nachrichten werden markiert → JARVIS antwortet dann kurz und gut vorlesbar
+- Sichtbare Mikrofon-Anzeige (roter Balken, roter Kreis); Mikrofon nie im Hintergrund aktiv
+
+**Phase 6 (Teil) – Android**
+- Installierbare Web-App (Manifest, PNG-Icons inkl. „maskable“), Schnellstart-Verknüpfung „Mit JARVIS sprechen“ (hört sofort zu)
+- Sicherer Zugriff vom Handy über Tailscale (HTTPS, kostenlos, auch unterwegs) – Anleitung im README
+- Mikrofon am Handy braucht HTTPS → deshalb Tailscale statt IP-Adresse
+
+**Tests (41, alle grün):** Anbieter-Streaming & Parameter (gegen simulierte APIs), Fehler/Wiederholungen/Abbruch, Gedächtnis-Logik, Kontextbudget, komplette API (Login, Chat, Gedächtnis, Zusammenfassung, Geräte). Zusätzlich manuell im echten Browser (Desktop + Handy-Größe) durchgespielt.
 
 ## 5. Offen / Nächste Schritte
 
-1. **Timo testet Meilenstein 1** am Windows-PC (Anleitung: README.md) – inkl. `npm run check` mit echtem Schlüssel.
-2. **Meilenstein 2 – Stimme (Phase 3):**
-   - Spracheingabe: Browser-Spracherkennung (Chrome/Edge, kostenlos) als Start; als Qualitäts-Option ein Speech-to-Text-Dienst
-   - Sprachausgabe mit tiefer, ruhiger deutscher Männerstimme – Kandidaten (Kosten vorher vorlegen!):
-     Azure Neural TTS (Gratis-Kontingent, z. B. Stimme „Conrad“), OpenAI TTS, ElevenLabs (beste Qualität, kostenpflichtig)
-   - Unterbrechen der Sprachausgabe, fortlaufender Gesprächsmodus
-3. **Meilenstein 3 – Android:** Zugriff vom Handy (HOST, Tailscale, HTTPS), PWA installieren, Schnellstart (Verknüpfung/Widget)
+1. **Timo testet** am Windows-PC und am Handy (Anleitung: README.md).
+2. **Notizen & Erinnerungen** mit Benachrichtigung zur gewünschten Zeit
+3. **PC-Steuerung** (siehe Punkt 6 unten)
 4. **Wake Word „Hey JARVIS“:** realistisch nur mit nativer Android-App (Vordergrund-Dienst mit sichtbarer Benachrichtigung) bzw. Hintergrundprogramm unter Windows (z. B. openWakeWord/Porcupine). Im Browser technisch nicht möglich → Alternative: Schnellstart-Verknüpfung.
 5. **Notizen & Erinnerungen/Termine (Phase 8)**, Wissensspeicher (Dokumente)
 6. **Windows-Aktionen (Phase 5):** Programme/Webseiten öffnen, Dateien suchen – mit Stufen lesend / ungefährlich / verändernd / kritisch und Bestätigung
@@ -106,6 +126,9 @@ start-jarvis.bat      Doppelklick-Start unter Windows
 
 - Standardmodell für OpenAI (`gpt-5`) ggf. an aktuelle Modellnamen anpassen.
 - **Echter Test mit Gemini (16.11.2026) erfolgreich:** JARVIS antwortet auf Deutsch im richtigen Ton, merkt sich automatisch Name und Interessen und erinnert sich in einem neuen Gespräch daran.
+- **Gratis-Kontingent von Gemini ist knapp:** Chat und Stimme haben eigene Tageslimits. Bei intensiven Tests waren beide erschöpft (JARVIS meldet das verständlich und spricht dann mit der Gerätestimme). Für den Alltag: Claude oder bezahlter Gemini-Tarif.
+- Gemini-TTS liest Regieanweisungen („Sprich ruhig: …“) mit vor → JARVIS schickt nur den reinen Text; der Charakter kommt von der gewählten Stimme.
+- Spracherkennung nur in Chrome/Edge (nicht Firefox); sie läuft über Google bzw. Microsoft.
 - Gemini im Gratis-Tarif ist **langsam** (ca. 10–25 s bis zur Antwort, plus Gedächtnis-Auswertung) und zeitweise überlastet (503) oder am Kontingent (429). Für flüssiges Arbeiten Claude empfohlen.
 - `gemini-flash-latest` hing beim Streaming zweimal bis zum Zeitlimit, `gemini-2.5-flash` ist für neue Nutzer abgeschaltet → Standard ist jetzt `gemini-3.5-flash`. Hintergrundaufgaben nutzen bei Gemini 3 geringe Denktiefe (halbiert die Wartezeit).
 - Claude und OpenAI noch nicht mit echtem Schlüssel getestet (nur gegen nachgebaute API-Antworten).
